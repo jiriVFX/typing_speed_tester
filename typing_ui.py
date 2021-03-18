@@ -43,7 +43,6 @@ class TypingUI(Tk):
         # Variable to know if this is the first time a key was pressed inside textarea
         self.key_stroke = 0
 
-
     def start_test(self, event=None):
         """Starts counting time of the test."""
         # Reset time, when one test finishes and another starts
@@ -69,18 +68,13 @@ class TypingUI(Tk):
 
     def compare_text(self, typed_text):
         mistake_pos = []
-        line_index= 0
+        line_index = 0
 
         for i in range(len(self.test_text)):
             if typed_text[i] != self.test_text[i]:
                 mistake_pos.append(i)
                 self.textarea.tag_add("mistake", f"1.{i}")
 
-        # print(self.test_text)
-        # print(len(self.test_text))
-        # print(typed_text[0])
-        # print(f"Last character ->{typed_text[71]}<-")
-        # print(len(typed_text))
         print(mistake_pos)
 
     def stop_test(self):
@@ -122,4 +116,3 @@ class TypingUI(Tk):
         # If this is the best or first time, write it to best_time.json
         with open("best_time.json", "w", encoding="utf-8") as file:
             json.dump(best_cpm_dict, file, indent=4)
-
