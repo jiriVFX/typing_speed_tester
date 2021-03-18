@@ -26,6 +26,8 @@ class TypingUI(Tk):
         self.label_text.grid(column=0, row=2, columnspan=2, pady=(0, 40), sticky="EW")
         self.textarea = Text(self, width=70, height=10, relief="solid", font=("Segoe UI", 12))
         self.textarea.grid(column=0, row=3, columnspan=2, sticky="EW")
+        # Tag for wrongly typed characters
+        self.textarea.tag_configure("mistake", foreground="red")
         # Set focus on textarea
         self.textarea.focus_set()
         # Best CPM
@@ -33,7 +35,9 @@ class TypingUI(Tk):
         self.label_best.grid(column=1, row=4, sticky="E")
 
         # Detect keypress to start the test
-        self.textarea.bind("<KeyPress>", self.writing)
+        self.textarea.bind("<KeyPress>", self.start_test)
+        # Detect keyrelease for ending the test
+        self.textarea.bind("<KeyRelease>", self.writing)
         # Variable to record the starting time
         self.start_time = 0
         # Variable to know if this is the first time a key was pressed inside textarea
@@ -41,22 +45,46 @@ class TypingUI(Tk):
 
 
     def start_test(self, event=None):
+        """Starts counting time of the test."""
         # Reset time, when one test finishes and another starts
-        self.start_time = 0
-        print("start")
-        # Make textarea focused
-        self.textarea.focus_set()
-        # Start counting time
-        self.start_time = time.time()
-
-    def writing(self, event):
         if self.key_stroke == 0:
-            self.start_test()
             self.key_stroke += 1
-        if len(self.test_text) == len(self.textarea.get("1.0", END)):
+            print("start")
+            # Make sure textarea is focused
+            self.textarea.focus_set()
+            # Start counting time
+            self.start_time = time.time()
+
+    def writing(self, event=None):
+        """Gets triggered with <KeyRelease> event. Calls self.stop_test, when the text is correctly typed.
+        Receives event object as parameter."""
+        # if self.key_stroke == 0:
+        #     self.start_test()
+        #     self.key_stroke += 1
+        typed_text = self.textarea.get("1.0", END)
+        # Text length is always length of the actual text + 1
+        if len(self.test_text) + 1 == len(typed_text):
+            self.compare_text(typed_text)
             self.stop_test()
 
+    def compare_text(self, typed_text):
+        mistake_pos = []
+        line_index= 0
+
+        for i in range(len(self.test_text)):
+            if typed_text[i] != self.test_text[i]:
+                mistake_pos.append(i)
+                self.textarea.tag_add("mistake", f"1.{i}")
+
+        # print(self.test_text)
+        # print(len(self.test_text))
+        # print(typed_text[0])
+        # print(f"Last character ->{typed_text[71]}<-")
+        # print(len(typed_text))
+        print(mistake_pos)
+
     def stop_test(self):
+        """Stops the test and shows results."""
         # Reset key_stroke when test finishes, so another can start
         self.key_stroke = 0
         end_time = time.time()
@@ -69,19 +97,25 @@ class TypingUI(Tk):
         # Write the new record
         if cpm_speed > self.best_cpm:
             self.write_best_speed(cpm_speed)
+        # Update Best SPM Label with the new record
+        self.label_best.config(text=f"Your best:  {self.read_best_speed()} CPM")
         print(final_time)
 
-    def read_best_speed(self):
+    def read_best_speed(self) -> int:
+        """Reads the best CPM speed from JSON file id there is any.
+        Return:
+        best_time : int"""
         try:
             with open("best_time.json", "r", encoding="utf-8") as file:
                 best_time = json.load(file)
             # String has to be converted first to float and then to integer, in case it has floating point
             return int(float(best_time["best_cpm"]))
         # If the file is empty, do nothing
-        except json.decoder.JSONDecodeError:
+        except (json.decoder.JSONDecodeError, FileNotFoundError) as exception:
             return 0
 
-    def write_best_speed(self, cpm_speed):
+    def write_best_speed(self, cpm_speed: int):
+        """Writes the new best cpm_speed in JSON file."""
         best_cpm_dict = {
             "best_cpm": cpm_speed,
         }
